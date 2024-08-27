@@ -2018,6 +2018,8 @@ class Library:
                 # 	tags.clear()
                 # 	tags = data["tags"].split(' ')
 
+                missing_tags = []
+                entry = self.get_entry(entry_id)
                 # Try to add matching tags in library.
                 for tag in tags:
                     matching: list[int] = self.search_tags(
@@ -2036,20 +2038,20 @@ class Library:
                         # but the idea behind it isn't bad. Maybe this could be
                         # user configurable and scale with custom fields.
 
-                        # tag_field_indices = self.get_field_index_in_entry(
-                        # 	entry_index, tags_field_id)
+                        tags_field_indices = self.get_field_index_in_entry(
+                        	entry, FieldID.TAGS)
                         content_tags_field_indices = self.get_field_index_in_entry(
-                            self.get_entry(entry_id), FieldID.CONTENT_TAGS
+                            entry, FieldID.CONTENT_TAGS
                         )
                         # meta_tags_field_indices = self.get_field_index_in_entry(
-                        # 	entry_index, meta_tags_field_id)
+                        #     entry, FieldID.META_TAGS)
 
                         if content_tags_field_indices:
                             priority_field_index = content_tags_field_indices[0]
-                        # elif tag_field_indices:
-                        # 	priority_field_index = tag_field_indices[0]
+                        elif tags_field_indices:
+                            priority_field_index = tags_field_indices[0]
                         # elif meta_tags_field_indices:
-                        # 	priority_field_index = meta_tags_field_indices[0]
+                        #     priority_field_index = meta_tags_field_indices[0]
 
                         if priority_field_index >= 0:
                             self.update_entry_field(
@@ -2060,12 +2062,24 @@ class Library:
                             self.update_entry_field(
                                 entry_id, -1, [matching[0]], "append"
                             )
+                    else:
+                        missing_tags.append(tag)
 
                 # Add all original string tags as a note.
                 str_tags = f"Original Tags: {tags}"
+                if len(missing_tags) > 0:
+                    str_tags += f"\n missing_tags: {missing_tags}"
+                str_tags += "\n(Added by Autofill)"
                 if not self.does_field_content_exist(entry_id, FieldID.NOTES, str_tags):
-                    self.add_field_to_entry(entry_id, FieldID.NOTES)
-                    self.update_entry_field(entry_id, -1, str_tags, "replace")
+                    found = False
+                    for notes_index in self.get_field_index_in_entry(entry, FieldID.NOTES):
+                        if "\n(Added by Autofill)" in self.get_field_attr(entry.fields[notes_index], "content"):
+                            found = True
+                            self.update_entry_field(entry_id, notes_index, str_tags, "replace")
+                            break
+                    if not found:
+                        self.add_field_to_entry(entry_id, FieldID.NOTES)
+                        self.update_entry_field(entry_id, -1, str_tags, "replace")
 
             # Add a Description Field if the data doesn't already exist.
             if data.get("description"):
