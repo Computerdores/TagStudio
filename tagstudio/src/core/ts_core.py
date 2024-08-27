@@ -68,7 +68,9 @@ class TagStudioCore:
                         info["artist"] = json_dump["user"].strip()
                         info["description"] = json_dump["description"].strip()
                         info["source"] = json_dump["post_url"].strip()
-                    # else:
+                    else:
+                        info["tags"] = json_dump["tags"]
+                        info["source"] = json_dump["source"]
                     # 	print(
                     # 		f'[INFO]: TagStudio does not currently support sidecar files for "{source}"')
 
