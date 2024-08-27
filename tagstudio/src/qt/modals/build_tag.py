@@ -211,6 +211,7 @@ class BuildTagPanel(PanelWidget):
         self.aliases_field.setText("\n".join(tag.aliases))
         self.set_subtags()
         self.color_field.setCurrentIndex(TAG_COLORS.index(tag.color.lower()))
+        self.name_field.selectAll()
         # self.tag_id = tag.id
 
     def build_tag(self) -> Tag:
