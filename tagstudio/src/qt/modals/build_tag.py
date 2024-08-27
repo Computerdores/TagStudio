@@ -86,6 +86,7 @@ class BuildTagPanel(PanelWidget):
         self.aliases_field = QTextEdit()
         self.aliases_field.setAcceptRichText(False)
         self.aliases_field.setMinimumHeight(40)
+        self.aliases_field.setTabChangesFocus(True)
         self.aliases_layout.addWidget(self.aliases_field)
 
         # Subtags ------------------------------------------------------------
@@ -211,6 +212,7 @@ class BuildTagPanel(PanelWidget):
         self.aliases_field.setText("\n".join(tag.aliases))
         self.set_subtags()
         self.color_field.setCurrentIndex(TAG_COLORS.index(tag.color.lower()))
+        self.name_field.selectAll()
         # self.tag_id = tag.id
 
     def build_tag(self) -> Tag:

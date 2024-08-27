@@ -87,10 +87,9 @@ class TagSearchPanel(PanelWidget):
         self.root_layout.addWidget(self.scroll_area)
         self.update_tags("")
 
-    # def reset(self):
-    # 	self.search_field.setText('')
-    # 	self.update_tags('')
-    # 	self.search_field.setFocus()
+    def reset(self):
+        self.search_field.setFocus()
+        self.search_field.selectAll()
 
     def on_return(self, text: str):
         if text and self.first_tag_id is not None:

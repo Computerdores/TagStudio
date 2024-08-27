@@ -91,6 +91,10 @@ class PanelModal(QWidget):
         self.root_layout.addWidget(widget)
         self.root_layout.setStretch(1, 2)
         self.root_layout.addWidget(self.button_container)
+    
+    def show(self):
+        super().show()
+        self.widget.reset()
 
 
 class PanelWidget(QWidget):
