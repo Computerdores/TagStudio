@@ -66,6 +66,7 @@ from tagstudio.core.ts_core import TagStudioCore
 from tagstudio.core.utils.str_formatting import strip_web_protocol
 from tagstudio.core.utils.types import unwrap
 from tagstudio.qt.cache_manager import CacheManager
+from tagstudio.qt.controller.widgets.quick_tagging_panel_controller import QuickTaggingPanel
 from tagstudio.qt.controllers.ffmpeg_missing_message_box import FfmpegMissingMessageBox
 
 # this import has side-effect of import PySide resources
@@ -542,6 +543,14 @@ class QtDriver(DriverMixin, QObject):
         self.main_window.menu_bar.folders_to_tags_action.triggered.connect(
             create_folders_tags_modal
         )
+
+        self.__quick_tagging_modal = QuickTaggingPanel.build_modal(self)
+
+        def open_quick_tagging_panel():
+            self.__quick_tagging_modal.widget.set_search(self.browsing_history.current)
+            self.__quick_tagging_modal.show()
+
+        self.main_window.menu_bar.quick_tagging_action.triggered.connect(open_quick_tagging_panel)
 
         # endregion
 

@@ -385,6 +385,9 @@ class MainMenuBar(QMenuBar):
         self.folders_to_tags_action.setEnabled(False)
         self.macros_menu.addAction(self.folders_to_tags_action)
 
+        self.quick_tagging_action = QAction("Quick Tagging", self)
+        self.macros_menu.addAction(self.quick_tagging_action)
+
         assign_mnemonics(self.macros_menu)
         self.addMenu(self.macros_menu)
 

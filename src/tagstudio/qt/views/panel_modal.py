@@ -4,7 +4,7 @@
 
 
 from collections.abc import Callable
-from typing import override
+from typing import Generic, TypeVar, override
 
 import structlog
 from PySide6 import QtCore, QtGui
@@ -15,15 +15,17 @@ from tagstudio.qt.translations import Translations
 
 logger = structlog.get_logger(__name__)
 
+T = TypeVar("T", bound="PanelWidget")
 
-class PanelModal(QWidget):
+
+class PanelModal(QWidget, Generic[T]):
     saved = Signal()
 
     # TODO: Separate callbacks from the buttons you want, and just generally
     # figure out what you want from this.
     def __init__(
         self,
-        widget: "PanelWidget",
+        widget: T,
         title: str = "",
         window_title: str | None = None,
         done_callback: Callable[[], None] | None = None,
@@ -34,7 +36,7 @@ class PanelModal(QWidget):
         # - OR -
         # [Cancel] [Save]
         super().__init__()
-        self.widget = widget
+        self.widget: T = widget
         self.setWindowTitle(title if window_title is None else window_title)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.root_layout = QVBoxLayout(self)
