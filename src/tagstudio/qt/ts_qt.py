@@ -67,6 +67,7 @@ from tagstudio.core.ts_core import TagStudioCore
 from tagstudio.core.utils.refresh_dir import RefreshDirTracker
 from tagstudio.core.utils.web import strip_web_protocol
 from tagstudio.qt.cache_manager import CacheManager
+from tagstudio.qt.controller.widgets.quick_tagging_panel_controller import QuickTaggingPanel
 from tagstudio.qt.helpers.custom_runnable import CustomRunnable
 from tagstudio.qt.helpers.file_deleter import delete_file
 from tagstudio.qt.helpers.function_iterator import FunctionIterator
@@ -533,6 +534,14 @@ class QtDriver(DriverMixin, QObject):
         self.main_window.menu_bar.folders_to_tags_action.triggered.connect(
             create_folders_tags_modal
         )
+
+        self.__quick_tagging_modal = QuickTaggingPanel.build_modal(self)
+
+        def open_quick_tagging_panel():
+            self.__quick_tagging_modal.widget.set_search(self.browsing_history.current)
+            self.__quick_tagging_modal.show()
+
+        self.main_window.menu_bar.quick_tagging_action.triggered.connect(open_quick_tagging_panel)
 
         # endregion
 
