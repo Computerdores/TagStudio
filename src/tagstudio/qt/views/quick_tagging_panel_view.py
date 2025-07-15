@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QSplitter
 
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.library.alchemy.models import Entry
@@ -23,19 +24,28 @@ class QuickTaggingPanelView(PanelWidget):
 
         root_layout = QHBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
+        root_splitter = QSplitter(self)
+        root_splitter.setOrientation(Qt.Orientation.Horizontal)
+        root_splitter.setHandleWidth(12)
 
-        left_panel_layout = QVBoxLayout(self)
+        # Left Panel
+        left_panel_splitter = QSplitter(self)
+        left_panel_splitter.setOrientation(Qt.Orientation.Vertical)
+        left_panel_splitter.setHandleWidth(12)
 
         self.__file_attrs = FileAttributes(self.__lib, driver)
-        left_panel_layout.addWidget(self.__file_attrs)
+        left_panel_splitter.addWidget(self.__file_attrs)
 
         self.__fields = FieldContainers(self.__lib, driver)
-        left_panel_layout.addWidget(self.__fields)
+        left_panel_splitter.addWidget(self.__fields)
 
-        root_layout.addLayout(left_panel_layout)
+        root_splitter.addWidget(left_panel_splitter)
 
+        # Center Panel
         self.__preview_thumb = PreviewThumb(self.__lib, driver)
-        root_layout.addWidget(self.__preview_thumb)
+        root_splitter.addWidget(self.__preview_thumb)
+
+        root_layout.addWidget(root_splitter)
 
     def _set_entry(self, entry: Entry) -> None:
         assert self.__lib.library_dir is not None
