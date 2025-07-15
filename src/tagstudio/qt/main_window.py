@@ -85,7 +85,7 @@ class MainMenuBar(QMenuBar):
     help_menu: QMenu
     about_action: QAction
 
-    def __init__(self, parent=...):
+    def __init__(self, parent: "MainWindow"):
         super().__init__(parent)
 
         self.setup_file_menu()
@@ -338,6 +338,9 @@ class MainMenuBar(QMenuBar):
         self.folders_to_tags_action = QAction(Translations["menu.macros.folders_to_tags"], self)
         self.folders_to_tags_action.setEnabled(False)
         self.macros_menu.addAction(self.folders_to_tags_action)
+
+        self.quick_tagging_action = QAction("Quick Tagging", self)
+        self.macros_menu.addAction(self.quick_tagging_action)
 
         self.addMenu(self.macros_menu)
 
