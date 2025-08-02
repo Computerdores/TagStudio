@@ -65,3 +65,5 @@ class QuickTaggingPanelView(PanelWidget):
 
         self.__file_attrs.update_stats(filepath, stats)
         self.__fields.update_from_entry(entry.id, update_badges=False)
+
+        self.__tag_form.set_entry(entry.id)

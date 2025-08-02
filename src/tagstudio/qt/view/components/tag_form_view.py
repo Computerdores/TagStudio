@@ -5,8 +5,8 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.library.alchemy.models import Tag
+from tagstudio.qt.controller.components.tag_box_controller import TagBoxWidget
 from tagstudio.qt.widgets.fields import FieldContainer
-from tagstudio.qt.widgets.tag_box import TagBoxWidget
 
 if TYPE_CHECKING:
     from tagstudio.qt.ts_qt import QtDriver
@@ -37,11 +37,10 @@ class TagForm:
 
 
 class TagFormComponentView(QWidget):
-    __lib: Library
+    __tag_boxes: list[TagBoxWidget] = []
 
     def __init__(self, driver: "QtDriver", form: TagForm, parent=None):
         super().__init__(parent)
-        self.__lib = driver.lib
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -49,5 +48,14 @@ class TagFormComponentView(QWidget):
 
         for field_name, tags in form._fields:
             container = FieldContainer(field_name, inline=False)
-            container.set_inner_widget(TagBoxWidget(set(tags), field_name, driver))
+
+            w = TagBoxWidget(field_name, driver)
+            w.set_tags(set(tags))
+            self.__tag_boxes.append(w)
+            container.set_inner_widget(w)
+
             root_layout.addWidget(container)
+
+    def set_entry(self, entry: int) -> None:
+        for tag_box in self.__tag_boxes:
+            tag_box.set_entries([entry])
