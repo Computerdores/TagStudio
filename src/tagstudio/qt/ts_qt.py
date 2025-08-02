@@ -535,11 +535,10 @@ class QtDriver(DriverMixin, QObject):
             create_folders_tags_modal
         )
 
-        self.__quick_tagging_modal = QuickTaggingPanel.build_modal(self)
-
         def open_quick_tagging_panel():
-            self.__quick_tagging_modal.widget.set_search(self.browsing_history.current)
-            self.__quick_tagging_modal.show()
+            modal = QuickTaggingPanel.build_modal(self)
+            modal.widget.set_search(self.browsing_history.current)
+            modal.show()
 
         self.main_window.menu_bar.quick_tagging_action.triggered.connect(open_quick_tagging_panel)
 

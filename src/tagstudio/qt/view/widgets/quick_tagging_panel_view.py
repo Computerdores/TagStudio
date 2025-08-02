@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QHBoxLayout, QSplitter
 
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.library.alchemy.models import Entry
+from tagstudio.qt.controller.components.tag_form_controller import TagForm, TagFormComponent
 from tagstudio.qt.controller.widgets.preview.preview_thumb_controller import PreviewThumb
 from tagstudio.qt.widgets.panel import PanelWidget
 from tagstudio.qt.widgets.preview.field_containers import FieldContainers
@@ -46,6 +47,13 @@ class QuickTaggingPanelView(PanelWidget):
         self.__preview_thumb = PreviewThumb(self.__lib, driver)
         root_splitter.addWidget(self.__preview_thumb)
         root_splitter.setStretchFactor(1, 1)
+
+        # Right Panel
+        self.__tag_form = TagFormComponent(
+            driver, TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
+        )
+        root_splitter.addWidget(self.__tag_form)
+        root_splitter.setStretchFactor(2, 2)
 
         root_layout.addWidget(root_splitter)
 
