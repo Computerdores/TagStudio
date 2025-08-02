@@ -14,26 +14,39 @@ if TYPE_CHECKING:
 
 class TagForm:
     __lib: Library
-    _fields: list[tuple[str, list[Tag]]] = []
+    _fields: list[tuple[str, list[int]]] = []
 
     def __init__(self, driver: "QtDriver"):
         self.__lib = driver.lib
 
     def add_field(self, field_name: str, possible_values: list[Tag | str | int]) -> "TagForm":
+        """Adds a field to the form with the given name and possible tag values.
+
+        Values can be Tag objects, tag names, or tag IDs.
+        The tag values will be stored as tag IDs and resolved on retrieval.
+        Duplicate tag IDs will be removed.
+        """
         tags = [
-            tag
+            tag_id
             for val in possible_values
             if (
-                tag := val
+                tag_id := val.id
                 if isinstance(val, Tag)
-                else self.__lib.get_tag_by_name(val)
+                else (tag.id if (tag := self.__lib.get_tag_by_name(val)) is not None else None)
                 if isinstance(val, str)
-                else self.__lib.get_tag(val)
+                else val
             )
             is not None
         ]
         self._fields.append((field_name, tags))
         return self
+
+    def get_fields(self) -> list[tuple[str, list[Tag]]]:
+        """Returns a list of all fields after resolving the tag ids to Tag objects."""
+        return [
+            (name, [tag for i in set(tag_ids) if (tag := self.__lib.get_tag(i)) is not None])
+            for name, tag_ids in self._fields
+        ]
 
 
 class TagFormComponentView(QWidget):
@@ -41,20 +54,28 @@ class TagFormComponentView(QWidget):
 
     def __init__(self, driver: "QtDriver", form: TagForm, parent=None):
         super().__init__(parent)
+        self.__lib = driver.lib
+        self.__form = form
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        for field_name, tags in form._fields:
+        for field_name, tags in form.get_fields():
             container = FieldContainer(field_name, inline=False)
 
             w = TagBoxWidget(field_name, driver)
-            w.set_tags(set(tags))
+            w.set_tags(tags)
+            w.on_update.connect(self.__update_tag_boxes)
             self.__tag_boxes.append(w)
             container.set_inner_widget(w)
 
             root_layout.addWidget(container)
+
+    def __update_tag_boxes(self) -> None:
+        for tag_box, field in zip(self.__tag_boxes, self.__form.get_fields(), strict=True):
+            assert tag_box.title == field[0], "TagBoxWidget title does not match field name"
+            tag_box.set_tags(field[1])
 
     def set_entry(self, entry: int) -> None:
         for tag_box in self.__tag_boxes:
