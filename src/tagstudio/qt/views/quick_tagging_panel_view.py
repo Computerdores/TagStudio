@@ -40,10 +40,12 @@ class QuickTaggingPanelView(PanelWidget):
         left_panel_splitter.addWidget(self.__fields)
 
         root_splitter.addWidget(left_panel_splitter)
+        root_splitter.setStretchFactor(0, 2)
 
         # Center Panel
         self.__preview_thumb = PreviewThumb(self.__lib, driver)
         root_splitter.addWidget(self.__preview_thumb)
+        root_splitter.setStretchFactor(1, 1)
 
         root_layout.addWidget(root_splitter)
 
