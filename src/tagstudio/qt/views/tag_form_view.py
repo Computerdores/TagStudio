@@ -37,11 +37,10 @@ class TagForm:
 
 
 class TagFormComponentView(QWidget):
-    __lib: Library
+    __tag_boxes: list[TagBoxWidget] = []
 
     def __init__(self, driver: "QtDriver", form: TagForm, parent=None):
         super().__init__(parent)
-        self.__lib = driver.lib
 
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -49,7 +48,14 @@ class TagFormComponentView(QWidget):
 
         for field_name, tags in form._fields:
             container = FieldContainer(field_name, inline=False)
-            tbw = TagBoxWidget(field_name, driver)
-            tbw.set_tags(set(tags))
-            container.set_inner_widget(tbw)
+
+            w = TagBoxWidget(field_name, driver)
+            w.set_tags(set(tags))
+            self.__tag_boxes.append(w)
+            container.set_inner_widget(w)
+
             root_layout.addWidget(container)
+
+    def set_entry(self, entry: int) -> None:
+        for tag_box in self.__tag_boxes:
+            tag_box.set_entries([entry])
