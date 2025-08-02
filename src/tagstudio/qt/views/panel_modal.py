@@ -90,6 +90,8 @@ class PanelModal(QWidget, Generic[T]):
 
             # trigger save button actions when pressing enter in the widget
             self.widget.add_callback(lambda: self.save_button.click())
+        else:
+            self.cancel_button = None
 
         if save_callback is not None:
             widget.done.connect(lambda: save_callback(widget.get_content()))
