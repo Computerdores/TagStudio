@@ -2,6 +2,7 @@
 # Created for TagStudio: https://github.com/CyanVoxel/TagStudio
 
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, override
 
 import structlog
@@ -24,6 +25,7 @@ class TagBoxWidget(TagBoxWidgetView):
     on_update = Signal()
 
     __entries: list[int] = []
+    __tag_click_action_override: TagClickActionOption | Callable[[Tag], None] | None = None
 
     def __init__(self, title: str, driver: "QtDriver"):
         super().__init__(title, driver)
@@ -32,9 +34,15 @@ class TagBoxWidget(TagBoxWidgetView):
     def set_entries(self, entries: list[int]) -> None:
         self.__entries = entries
 
+    def override_tag_click_action(self, action: TagClickActionOption | Callable) -> None:
+        self.__tag_click_action_override = action
+
     @override
     def _on_click(self, tag: Tag) -> None:  # type: ignore[misc]
-        match self.__driver.settings.tag_click_action:
+        if callable(self.__tag_click_action_override):
+            self.__tag_click_action_override(tag)
+            return
+        match self.__tag_click_action_override or self.__driver.settings.tag_click_action:
             case TagClickActionOption.OPEN_EDIT:
                 self._on_edit(tag)
             case TagClickActionOption.SET_SEARCH:
