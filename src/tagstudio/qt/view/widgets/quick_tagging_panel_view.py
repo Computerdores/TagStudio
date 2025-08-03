@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QSplitter
+from PySide6.QtWidgets import QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.library.alchemy.models import Entry
@@ -31,17 +31,16 @@ class QuickTaggingPanelView(PanelWidget):
         root_splitter.setHandleWidth(12)
 
         # Left Panel
-        left_panel_splitter = QSplitter(self)
-        left_panel_splitter.setOrientation(Qt.Orientation.Vertical)
-        left_panel_splitter.setHandleWidth(12)
+        left_panel = QWidget(self)
+        left_panel_layout = QVBoxLayout(left_panel)
 
         self.__file_attrs = FileAttributes(self.__lib, driver)
-        left_panel_splitter.addWidget(self.__file_attrs)
+        left_panel_layout.addWidget(self.__file_attrs)
 
         self.__fields = FieldContainers(self.__lib, driver)
-        left_panel_splitter.addWidget(self.__fields)
+        left_panel_layout.addWidget(self.__fields)
 
-        root_splitter.addWidget(left_panel_splitter)
+        root_splitter.addWidget(left_panel)
         root_splitter.setStretchFactor(0, 2)
 
         # Center Panel
@@ -50,11 +49,16 @@ class QuickTaggingPanelView(PanelWidget):
         root_splitter.setStretchFactor(1, 1)
 
         # Right Panel
+        right_panel = QWidget(self)
+        right_panel_layout = QVBoxLayout(right_panel)
+
         self.__tag_form = TagFormComponent(
             driver, TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
         )
         self.__tag_form.on_update.connect(self.__on_update)
-        root_splitter.addWidget(self.__tag_form)
+        right_panel_layout.addWidget(self.__tag_form)
+
+        root_splitter.addWidget(right_panel)
         root_splitter.setStretchFactor(2, 2)
 
         root_layout.addWidget(root_splitter)

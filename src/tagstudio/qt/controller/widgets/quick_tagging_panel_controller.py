@@ -28,4 +28,8 @@ class QuickTaggingPanel(QuickTaggingPanelView):
 
     @classmethod
     def build_modal(cls, driver: "QtDriver") -> PanelModal["QuickTaggingPanel"]:
-        return PanelModal(cls(driver), "Quick Tagging", has_save=False)
+        w: PanelModal[QuickTaggingPanel] = PanelModal(cls(driver), "Quick Tagging", has_save=False)
+        w.root_layout.setContentsMargins(6, 6, 6, 6)
+        w.title_widget.setVisible(False)
+        w.button_container.setVisible(False)
+        return w
