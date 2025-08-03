@@ -5,6 +5,7 @@ from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.utils.types import unwrap
 from tagstudio.qt.views.panel_modal import PanelModal
 from tagstudio.qt.views.quick_tagging_panel_view import QuickTaggingPanelView
+from tagstudio.qt.views.tag_form_view import TagForm
 
 if TYPE_CHECKING:
     from tagstudio.qt.ts_qt import QtDriver
@@ -15,8 +16,8 @@ class QuickTaggingPanel(QuickTaggingPanelView):
     __results: list[int]
     __index: int
 
-    def __init__(self, driver: "QtDriver"):
-        super().__init__(driver)
+    def __init__(self, driver: "QtDriver", form: TagForm):
+        super().__init__(driver, form)
         self.__lib = driver.lib
 
     @override
@@ -40,7 +41,10 @@ class QuickTaggingPanel(QuickTaggingPanelView):
 
     @classmethod
     def build_modal(cls, driver: "QtDriver") -> PanelModal["QuickTaggingPanel"]:
-        w: PanelModal[QuickTaggingPanel] = PanelModal(cls(driver), "Quick Tagging", has_save=False)
+        form = TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
+        w: PanelModal[QuickTaggingPanel] = PanelModal(
+            cls(driver, form), "Quick Tagging", has_save=False
+        )
         w.root_layout.setContentsMargins(6, 6, 6, 6)
         w.title_widget.setVisible(False)
         w.button_container.setVisible(False)
