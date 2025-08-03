@@ -68,11 +68,19 @@ class TagFormComponentView(QWidget):
 
             w = TagBoxWidget(field_name, driver)
             w.set_tags(tags)
+            w.override_tag_click_action(self._on_tag_click)
             w.on_update.connect(self.__on_update)
             self.__tag_boxes.append(w)
             container.set_inner_widget(w)
 
             root_layout.addWidget(container)
+
+    def set_entry(self, entry: int) -> None:
+        for tag_box in self.__tag_boxes:
+            tag_box.set_entries([entry])
+
+    def _on_tag_click(self, tag: Tag) -> None:
+        raise NotImplementedError
 
     def __on_update(self) -> None:
         self.on_update.emit()
@@ -80,7 +88,3 @@ class TagFormComponentView(QWidget):
         for tag_box, field in zip(self.__tag_boxes, self.__form.get_fields(), strict=True):
             assert tag_box.title == field[0], "TagBoxWidget title does not match field name"
             tag_box.set_tags(field[1])
-
-    def set_entry(self, entry: int) -> None:
-        for tag_box in self.__tag_boxes:
-            tag_box.set_entries([entry])
