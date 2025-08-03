@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from tagstudio.core.library.alchemy.enums import BrowsingState
 from tagstudio.core.library.alchemy.library import Library
@@ -19,11 +19,23 @@ class QuickTaggingPanel(QuickTaggingPanelView):
         super().__init__(driver)
         self.__lib = driver.lib
 
+    @override
+    def _on_next(self):  # type: ignore[misc]
+        self.__update_index(+1)
+
+    @override
+    def _on_previous(self):  # type: ignore[misc]
+        self.__update_index(-1)
+
     def set_search(self, query: BrowsingState) -> None:
         self.__index = 0
 
         self.__results = self.__lib.search_library(query, None).items
 
+        self.__update_index()
+
+    def __update_index(self, diff: int = 0) -> None:
+        self.__index = (self.__index + diff) % len(self.__results)
         self._set_entry(self.__results[self.__index])
 
     @classmethod
