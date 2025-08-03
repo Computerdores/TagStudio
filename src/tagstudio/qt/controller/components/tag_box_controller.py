@@ -66,6 +66,7 @@ class TagBoxWidget(TagBoxWidgetView):
         logger.info(
             "[TagBoxWidget] remove_tag",
             selected=self.__entries,
+            tag=tag.id,
         )
 
         for entry_id in self.__entries:

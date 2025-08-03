@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 class QuickTaggingPanelView(PanelWidget):
     __lib: Library
+    __current_entry: Entry | None = None
 
     def __init__(self, driver: "QtDriver"):
         super().__init__()
@@ -52,12 +53,14 @@ class QuickTaggingPanelView(PanelWidget):
         self.__tag_form = TagFormComponent(
             driver, TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
         )
+        self.__tag_form.on_update.connect(self.__on_update)
         root_splitter.addWidget(self.__tag_form)
         root_splitter.setStretchFactor(2, 2)
 
         root_layout.addWidget(root_splitter)
 
     def _set_entry(self, entry: Entry) -> None:
+        self.__current_entry = entry
         assert self.__lib.library_dir is not None
         filepath: Path = self.__lib.library_dir / entry.path
 
@@ -67,3 +70,7 @@ class QuickTaggingPanelView(PanelWidget):
         self.__fields.update_from_entry(entry.id, update_badges=False)
 
         self.__tag_form.set_entry(entry.id)
+
+    def __on_update(self) -> None:
+        if self.__current_entry is not None:
+            self._set_entry(self.__current_entry)

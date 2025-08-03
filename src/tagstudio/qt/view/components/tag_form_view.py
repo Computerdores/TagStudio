@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from tagstudio.core.library.alchemy.library import Library
@@ -50,6 +50,8 @@ class TagForm:
 
 
 class TagFormComponentView(QWidget):
+    on_update = Signal()
+
     __tag_boxes: list[TagBoxWidget] = []
 
     def __init__(self, driver: "QtDriver", form: TagForm, parent=None):
@@ -66,13 +68,15 @@ class TagFormComponentView(QWidget):
 
             w = TagBoxWidget(field_name, driver)
             w.set_tags(tags)
-            w.on_update.connect(self.__update_tag_boxes)
+            w.on_update.connect(self.__on_update)
             self.__tag_boxes.append(w)
             container.set_inner_widget(w)
 
             root_layout.addWidget(container)
 
-    def __update_tag_boxes(self) -> None:
+    def __on_update(self) -> None:
+        self.on_update.emit()
+        # Update tag boxes
         for tag_box, field in zip(self.__tag_boxes, self.__form.get_fields(), strict=True):
             assert tag_box.title == field[0], "TagBoxWidget title does not match field name"
             tag_box.set_tags(field[1])
