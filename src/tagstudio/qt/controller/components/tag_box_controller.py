@@ -35,6 +35,8 @@ class TagBoxWidget(TagBoxWidgetView):
         self.__entries = entries
 
     def override_tag_click_action(self, action: TagClickActionOption | Callable) -> None:
+        # TODO this whole override thing is kind of a hack,
+        # the TagClickActionOption stuff should be moved to field container or preview panel instead
         self.__tag_click_action_override = action
 
     @override
