@@ -2,7 +2,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QSplitter, QVBoxLayout, QWidget
 
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.library.alchemy.models import Entry
@@ -11,6 +12,7 @@ from tagstudio.qt.controllers.tag_form_controller import TagForm, TagFormCompone
 from tagstudio.qt.mixed.field_containers import FieldContainers
 from tagstudio.qt.mixed.file_attributes import FileAttributes
 from tagstudio.qt.views.panel_modal import PanelWidget
+from tagstudio.qt.views.preview_panel_view import BUTTON_STYLE
 
 if TYPE_CHECKING:
     from tagstudio.qt.ts_qt import QtDriver
@@ -55,13 +57,46 @@ class QuickTaggingPanelView(PanelWidget):
         self.__tag_form = TagFormComponent(
             driver, TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
         )
+        self.__tag_form.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.__tag_form.on_update.connect(self.__on_update)
         right_panel_layout.addWidget(self.__tag_form)
+
+        buttons_container = QWidget(right_panel)
+        buttons_container.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        buttons_layout = QHBoxLayout(buttons_container)
+        buttons_layout.setContentsMargins(0, 0, 0, 0)
+        buttons_layout.setSpacing(6)
+
+        button_previous = QPushButton("Previous")
+        button_previous.setCursor(Qt.CursorShape.PointingHandCursor)
+        button_previous.setMinimumHeight(28)
+        button_previous.setStyleSheet(BUTTON_STYLE)
+        button_previous.clicked.connect(self._on_previous)
+        buttons_layout.addWidget(button_previous)
+        shortcut_previous = QShortcut(QKeySequence("Left"), self)
+        shortcut_previous.activated.connect(button_previous.click)
+
+        button_next = QPushButton("Next")
+        button_next.setCursor(Qt.CursorShape.PointingHandCursor)
+        button_next.setMinimumHeight(28)
+        button_next.setStyleSheet(BUTTON_STYLE)
+        button_next.clicked.connect(self._on_next)
+        buttons_layout.addWidget(button_next)
+        shortcut_next = QShortcut(QKeySequence("Right"), self)
+        shortcut_next.activated.connect(button_next.click)
+
+        right_panel_layout.addWidget(buttons_container)
 
         root_splitter.addWidget(right_panel)
         root_splitter.setStretchFactor(2, 2)
 
         root_layout.addWidget(root_splitter)
+
+    def _on_previous(self) -> None:
+        raise NotImplementedError
+
+    def _on_next(self) -> None:
+        raise NotImplementedError
 
     def _set_entry(self, entry: Entry) -> None:
         self.__current_entry = entry
