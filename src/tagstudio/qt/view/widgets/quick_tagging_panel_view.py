@@ -22,7 +22,7 @@ class QuickTaggingPanelView(PanelWidget):
     __lib: Library
     __current_entry: Entry | None = None
 
-    def __init__(self, driver: "QtDriver"):
+    def __init__(self, driver: "QtDriver", form: TagForm):
         super().__init__()
         self.__lib = driver.lib
 
@@ -54,9 +54,7 @@ class QuickTaggingPanelView(PanelWidget):
         right_panel = QWidget(self)
         right_panel_layout = QVBoxLayout(right_panel)
 
-        self.__tag_form = TagFormComponent(
-            driver, TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
-        )
+        self.__tag_form = TagFormComponent(driver, form)
         self.__tag_form.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self.__tag_form.on_update.connect(self.__on_update)
         right_panel_layout.addWidget(self.__tag_form)
