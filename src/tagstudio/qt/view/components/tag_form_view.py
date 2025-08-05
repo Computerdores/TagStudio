@@ -14,10 +14,11 @@ if TYPE_CHECKING:
 
 class TagForm:
     __lib: Library
-    _fields: list[tuple[str, list[int]]] = []
+    __fields: list[tuple[str, list[int]]] = []
 
     def __init__(self, driver: "QtDriver"):
         self.__lib = driver.lib
+        self.__fields = []  # otherwise self.__fields.append modifies a class variable
 
     def add_field(self, field_name: str, possible_values: list[Tag | str | int]) -> "TagForm":
         """Adds a field to the form with the given name and possible tag values.
@@ -38,14 +39,14 @@ class TagForm:
             )
             is not None
         ]
-        self._fields.append((field_name, tags))
+        self.__fields.append((field_name, tags))
         return self
 
     def get_fields(self) -> list[tuple[str, list[Tag]]]:
         """Returns a list of all fields after resolving the tag ids to Tag objects."""
         return [
             (name, [tag for i in set(tag_ids) if (tag := self.__lib.get_tag(i)) is not None])
-            for name, tag_ids in self._fields
+            for name, tag_ids in self.__fields
         ]
 
 
@@ -56,7 +57,6 @@ class TagFormComponentView(QWidget):
 
     def __init__(self, driver: "QtDriver", form: TagForm, parent=None):
         super().__init__(parent)
-        self.__lib = driver.lib
         self.__form = form
 
         root_layout = QVBoxLayout(self)
