@@ -96,7 +96,13 @@ class QuickTaggingPanelView(PanelWidget):
     def _on_next(self) -> None:
         raise NotImplementedError
 
-    def _set_entry(self, entry: Entry) -> None:
+    def _set_entry(self, entry_id: Entry | int) -> None:
+        if isinstance(entry_id, int):
+            entry = self.__lib.get_entry(entry_id)
+            assert entry is not None
+        else:
+            entry = entry_id
+
         self.__current_entry = entry
         assert self.__lib.library_dir is not None
         filepath: Path = self.__lib.library_dir / entry.path

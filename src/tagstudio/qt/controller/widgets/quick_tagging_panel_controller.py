@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, override
 
 from tagstudio.core.library.alchemy.enums import BrowsingState
 from tagstudio.core.library.alchemy.library import Library
-from tagstudio.core.library.alchemy.models import Entry
 from tagstudio.qt.view.components.tag_form_view import TagForm
 from tagstudio.qt.view.widgets.quick_tagging_panel_view import QuickTaggingPanelView
 from tagstudio.qt.widgets.panel import PanelModal
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
 
 class QuickTaggingPanel(QuickTaggingPanelView):
     __lib: Library
-    __results: list[Entry]
+    __results: list[int]
     __index: int
 
     def __init__(self, driver: "QtDriver", form: TagForm):
@@ -31,7 +30,7 @@ class QuickTaggingPanel(QuickTaggingPanelView):
     def set_search(self, query: BrowsingState) -> None:
         self.__index = 0
 
-        self.__results = self.__lib.search_library(query, None).items
+        self.__results = self.__lib.search_library(query, None).ids
 
         self.__update_index()
 
