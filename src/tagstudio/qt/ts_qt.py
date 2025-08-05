@@ -66,13 +66,13 @@ from tagstudio.core.ts_core import TagStudioCore
 from tagstudio.core.utils.str_formatting import strip_web_protocol
 from tagstudio.core.utils.types import unwrap
 from tagstudio.qt.cache_manager import CacheManager
-from tagstudio.qt.controller.widgets.quick_tagging_panel_controller import QuickTaggingPanel
 from tagstudio.qt.controllers.ffmpeg_missing_message_box import FfmpegMissingMessageBox
 
 # this import has side-effect of import PySide resources
 from tagstudio.qt.controllers.fix_ignored_modal_controller import FixIgnoredEntriesModal
 from tagstudio.qt.controllers.ignore_modal_controller import IgnoreModal
 from tagstudio.qt.controllers.library_info_window_controller import LibraryInfoWindow
+from tagstudio.qt.controllers.quick_tagging_panel_controller import QuickTaggingPanel
 from tagstudio.qt.global_settings import (
     DEFAULT_GLOBAL_SETTINGS_PATH,
     GlobalSettings,
