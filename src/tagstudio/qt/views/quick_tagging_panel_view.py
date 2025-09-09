@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import structlog
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QSplitter, QVBoxLayout, QWidget
 
 from tagstudio.core.library.alchemy.library import Library
@@ -16,6 +16,8 @@ from tagstudio.qt.views.preview_panel_view import BUTTON_STYLE
 
 if TYPE_CHECKING:
     from tagstudio.qt.ts_qt import QtDriver
+
+logger = structlog.get_logger(__name__)
 
 
 class QuickTaggingPanelView(PanelWidget):
@@ -71,8 +73,6 @@ class QuickTaggingPanelView(PanelWidget):
         button_previous.setStyleSheet(BUTTON_STYLE)
         button_previous.clicked.connect(self._on_previous)
         buttons_layout.addWidget(button_previous)
-        shortcut_previous = QShortcut(QKeySequence("Left"), self)
-        shortcut_previous.activated.connect(button_previous.click)
 
         button_next = QPushButton("Next")
         button_next.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -80,8 +80,6 @@ class QuickTaggingPanelView(PanelWidget):
         button_next.setStyleSheet(BUTTON_STYLE)
         button_next.clicked.connect(self._on_next)
         buttons_layout.addWidget(button_next)
-        shortcut_next = QShortcut(QKeySequence("Right"), self)
-        shortcut_next.activated.connect(button_next.click)
 
         right_panel_layout.addWidget(buttons_container)
 

@@ -1,5 +1,9 @@
 from typing import TYPE_CHECKING, override
 
+import structlog
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeyEvent
+
 from tagstudio.core.library.alchemy.enums import BrowsingState
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.utils.types import unwrap
@@ -10,6 +14,8 @@ from tagstudio.qt.views.tag_form_view import TagForm
 if TYPE_CHECKING:
     from tagstudio.qt.ts_qt import QtDriver
 
+logger = structlog.get_logger(__name__)
+
 
 class QuickTaggingPanel(QuickTaggingPanelView):
     __lib: Library
@@ -19,6 +25,7 @@ class QuickTaggingPanel(QuickTaggingPanelView):
     def __init__(self, driver: "QtDriver", form: TagForm):
         super().__init__(driver, form)
         self.__lib = driver.lib
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     @override
     def _on_next(self):  # type: ignore[misc]
@@ -49,3 +56,16 @@ class QuickTaggingPanel(QuickTaggingPanelView):
         w.title_widget.setVisible(False)
         w.button_container.setVisible(False)
         return w
+
+    @override
+    def keyPressEvent(self, event: QKeyEvent):  # type: ignore[misc]
+        if event.modifiers() != Qt.KeyboardModifier.NoModifier:
+            return super().keyPressEvent(event)
+
+        match event.key():
+            case Qt.Key.Key_Left:
+                self._on_previous()
+            case Qt.Key.Key_Right:
+                self._on_next()
+            case _:
+                return super().keyPressEvent(event)
