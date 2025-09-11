@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+import ujson
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
@@ -48,6 +49,14 @@ class TagForm:
             (name, [tag for i in set(tag_ids) if (tag := self.__lib.get_tag(i)) is not None])
             for name, tag_ids in self.__fields
         ]
+
+    @classmethod
+    def from_json(cls, json: str, driver: "QtDriver") -> "TagForm":
+        data: dict[str, list[str | int]] = ujson.loads(json)
+        form = TagForm(driver)
+        for field in data:
+            form = form.add_field(field, cast(list[Tag | str | int], data[field]))
+        return form
 
 
 class TagFormComponentView(QWidget):

@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, cast, override
 
 import structlog
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QInputDialog, QWidget
 
 from tagstudio.core.library.alchemy.enums import BrowsingState
 from tagstudio.core.library.alchemy.library import Library
@@ -47,8 +48,17 @@ class QuickTaggingPanel(QuickTaggingPanelView):
         self._set_entry(unwrap(self.__lib.get_entry(self.__results[self.__index])))
 
     @classmethod
-    def build_modal(cls, driver: "QtDriver") -> PanelModal["QuickTaggingPanel"]:
-        form = TagForm(driver).add_field("In-/Outdoor", ["Wallpaper", "Music"])
+    def build_modal(cls, driver: "QtDriver") -> PanelModal["QuickTaggingPanel"] | None:
+        text, ok = QInputDialog.getMultiLineText(
+            cast(QWidget, None),
+            "TagForm Chooser",
+            "Enter TagForm JSON:",
+            '{"Type": ["Wallpaper","Music"],"Character":["Mario","Luigi"]}',
+        )
+        if not ok:
+            return None
+
+        form = TagForm.from_json(text, driver)
         w: PanelModal[QuickTaggingPanel] = PanelModal(
             cls(driver, form), "Quick Tagging", has_save=False
         )

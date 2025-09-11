@@ -546,6 +546,8 @@ class QtDriver(DriverMixin, QObject):
 
         def open_quick_tagging_panel():
             modal = QuickTaggingPanel.build_modal(self)
+            if modal is None:
+                return
             modal.widget.set_search(self.browsing_history.current)
             modal.show()
 
