@@ -89,7 +89,7 @@ class SettingsPanel(PanelWidget):
         # and we want to use the current language for the dropdowns
 
         self.driver = driver
-        self.setMinimumSize(400, 300)
+        self.setMinimumSize(400, 500)
 
         self.root_layout = QVBoxLayout(self)
         self.root_layout.setContentsMargins(0, 6, 0, 0)
@@ -183,13 +183,22 @@ class SettingsPanel(PanelWidget):
             Translations["settings.show_filenames_in_grid"], self.show_filenames_checkbox
         )
 
+        # Infinite Scrolling
+        self.infinite_scroll = QCheckBox()
+        self.infinite_scroll.setChecked(self.driver.settings.infinite_scroll)
+        self.infinite_scroll.checkStateChanged.connect(
+            lambda checked: self.page_size_line_edit.setEnabled(not checked.value)
+        )
+        form_layout.addRow(Translations["settings.infinite_scroll"], self.infinite_scroll)
+
         # Page Size
         self.page_size_line_edit = QLineEdit()
         self.page_size_line_edit.setText(str(self.driver.settings.page_size))
+        self.page_size_line_edit.setEnabled(not self.infinite_scroll.checkState().value)
 
         def on_page_size_changed():
             text = self.page_size_line_edit.text()
-            if not text.isdigit() or int(text) < 1:
+            if not text.isdigit():
                 self.page_size_line_edit.setText(str(self.driver.settings.page_size))
 
         self.page_size_line_edit.editingFinished.connect(on_page_size_changed)
@@ -288,6 +297,7 @@ class SettingsPanel(PanelWidget):
             "autoplay": self.autoplay_checkbox.isChecked(),
             "show_filenames_in_grid": self.show_filenames_checkbox.isChecked(),
             "page_size": int(self.page_size_line_edit.text()),
+            "infinite_scroll": self.infinite_scroll.isChecked(),
             "show_filepath": self.filepath_combobox.currentData(),
             "theme": self.theme_combobox.currentData(),
             "tag_click_action": self.tag_click_action_combobox.currentData(),
@@ -307,6 +317,7 @@ class SettingsPanel(PanelWidget):
         driver.settings.thumb_cache_size = settings["thumb_cache_size"]
         driver.settings.show_filenames_in_grid = settings["show_filenames_in_grid"]
         driver.settings.page_size = settings["page_size"]
+        driver.settings.infinite_scroll = settings["infinite_scroll"]
         driver.settings.show_filepath = settings["show_filepath"]
         driver.settings.theme = settings["theme"]
         driver.settings.tag_click_action = settings["tag_click_action"]

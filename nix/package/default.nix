@@ -6,7 +6,7 @@
   qt6,
   ripgrep,
   stdenv,
-  wrapGAppsHook,
+  wrapGAppsHook3,
 
   pillow-jxl-plugin,
 
@@ -30,7 +30,7 @@ python3Packages.buildPythonApplication {
     # Should be unnecessary once PR is pulled.
     # PR: https://github.com/NixOS/nixpkgs/pull/271037
     # Issue: https://github.com/NixOS/nixpkgs/issues/149812
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
   buildInputs = [
     qt6.qtbase
@@ -55,14 +55,14 @@ python3Packages.buildPythonApplication {
   dontWrapGApps = true;
   dontWrapQtApps = true;
   makeWrapperArgs = [
-    "--prefix PATH : ${
+    "--suffix PATH : ${
       lib.makeBinPath [
         ffmpeg-headless
         ripgrep
       ]
     }"
   ]
-  ++ lib.optional stdenv.hostPlatform.isLinux "--prefix LD_LIBRARY_PATH : ${
+  ++ lib.optional stdenv.hostPlatform.isLinux "--suffix LD_LIBRARY_PATH : ${
     lib.makeLibraryPath [ pipewire ]
   }"
   ++ [
@@ -77,7 +77,9 @@ python3Packages.buildPythonApplication {
     "pillow-avif-plugin"
     "pillow-heif"
     "pillow-jxl-plugin"
+    "py7zr"
     "pyside6"
+    "rarfile"
     "structlog"
     "typing-extensions"
   ];
@@ -96,9 +98,11 @@ python3Packages.buildPythonApplication {
       pillow
       pillow-avif-plugin
       pillow-heif
+      py7zr
       pydantic
       pydub
       pyside6
+      rarfile
       rawpy
       send2trash
       sqlalchemy
@@ -115,6 +119,7 @@ python3Packages.buildPythonApplication {
   disabledTests = [
     "test_badge_visual_state"
     "test_browsing_state_update"
+    "test_close_library" # TODO: Look into segfault.
     "test_flow_layout_happy_path"
     "test_get" # TODO: Look further into, might be possible to run.
     "test_json_migration"

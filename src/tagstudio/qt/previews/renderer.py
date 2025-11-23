@@ -7,23 +7,28 @@ import contextlib
 import hashlib
 import math
 import os
+import tarfile
 import xml.etree.ElementTree as ET
 import zipfile
 from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 from warnings import catch_warnings
 from xml.etree.ElementTree import Element
 
 import cv2
 import numpy as np
 import pillow_avif  # noqa: F401 # pyright: ignore[reportUnusedImport]
+import py7zr
+import py7zr.io
+import rarfile
 import rawpy
 import srctools
 import structlog
 from cv2.typing import MatLike
-from mutagen import MutagenError, flac, id3, mp4
+from mutagen import flac, id3, mp4
+from mutagen._util import MutagenError
 from PIL import (
     Image,
     ImageChops,
@@ -75,7 +80,6 @@ from tagstudio.qt.previews.vendored.pydub.audio_segment import (
 from tagstudio.qt.resource_manager import ResourceManager
 
 if TYPE_CHECKING:
-    from tagstudio.core.library.alchemy.library import Library
     from tagstudio.qt.ts_qt import QtDriver
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -91,6 +95,40 @@ except ImportError:
     logger.exception('[ThumbRenderer] Could not import the "pillow_jxl" module')
 
 
+class _SevenZipFile(py7zr.SevenZipFile):
+    """Wrapper around py7zr.SevenZipFile to mimic zipfile.ZipFile's API."""
+
+    def __init__(self, filepath: Path, mode: Literal["r"]) -> None:
+        super().__init__(filepath, mode)
+
+    def read(self, name: str) -> bytes:
+        # SevenZipFile must be reset after every extraction
+        # See https://py7zr.readthedocs.io/en/stable/api.html#py7zr.SevenZipFile.extract
+        self.reset()
+        factory = py7zr.io.BytesIOFactory(limit=10485760)  # 10 MiB
+        self.extract(targets=[name], factory=factory)
+        return factory.get(name).read()
+
+
+class _TarFile(tarfile.TarFile):
+    """Wrapper around tarfile.TarFile to mimic zipfile.ZipFile's API."""
+
+    def __init__(self, filepath: Path, mode: Literal["r"]) -> None:
+        super().__init__(filepath, mode)
+
+    def namelist(self) -> list[str]:
+        return self.getnames()
+
+    def read(self, name: str) -> bytes:
+        return unwrap(self.extractfile(name)).read()
+
+
+type _Archive_T = (
+    type[zipfile.ZipFile] | type[rarfile.RarFile] | type[_SevenZipFile] | type[_TarFile]
+)
+type _Archive = zipfile.ZipFile | rarfile.RarFile | _SevenZipFile | _TarFile
+
+
 class ThumbRenderer(QObject):
     """A class for rendering image and file thumbnails."""
 
@@ -99,11 +137,10 @@ class ThumbRenderer(QObject):
     updated_ratio = Signal(float)
     cached_img_ext: str = ".webp"
 
-    def __init__(self, driver: "QtDriver", library: "Library") -> None:
+    def __init__(self, driver: "QtDriver") -> None:
         """Initialize the class."""
         super().__init__()
         self.driver = driver
-        self.lib = library
 
         settings_res = self.driver.settings.cached_thumb_resolution
         self.cached_img_res = (
@@ -398,9 +435,9 @@ class ThumbRenderer(QObject):
         )
 
         # Get icon by name
-        icon: Image.Image | None = self.rm.get(name)
+        icon: Image.Image | None = self.rm.get(name)  # pyright: ignore[reportAssignmentType]
         if not icon:
-            icon = self.rm.get("file_generic")
+            icon = self.rm.get("file_generic")  # pyright: ignore[reportAssignmentType]
             if not icon:
                 icon = Image.new(mode="RGBA", size=(32, 32), color="magenta")
 
@@ -496,9 +533,9 @@ class ThumbRenderer(QObject):
         )
 
         # Get icon by name
-        icon: Image.Image | None = self.rm.get(name)
+        icon: Image.Image | None = self.rm.get(name)  # pyright: ignore[reportAssignmentType]
         if not icon:
-            icon = self.rm.get("file_generic")
+            icon = self.rm.get("file_generic")  # pyright: ignore[reportAssignmentType]
             if not icon:
                 icon = Image.new(mode="RGBA", size=(32, 32), color="magenta")
 
@@ -627,14 +664,14 @@ class ThumbRenderer(QObject):
                     artwork = Image.open(BytesIO(flac_covers[0].data))
             elif ext in [".mp4", ".m4a", ".aac"]:
                 mp4_tags: mp4.MP4 = mp4.MP4(filepath)
-                mp4_covers: list = mp4_tags.get("covr")
+                mp4_covers: list | None = mp4_tags.get("covr")  # pyright: ignore[reportAssignmentType]
                 if mp4_covers:
                     artwork = Image.open(BytesIO(mp4_covers[0]))
             if artwork:
                 image = artwork
         except (
             FileNotFoundError,
-            id3.ID3NoHeaderError,
+            id3.ID3NoHeaderError,  # pyright: ignore[reportPrivateImportUsage]
             mp4.MP4MetadataError,
             mp4.MP4StreamInfoError,
             MutagenError,
@@ -731,7 +768,7 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _blender(filepath: Path) -> Image.Image:
+    def _blender(filepath: Path) -> Image.Image | None:
         """Get an emended thumbnail from a Blender file, if a thumbnail is present.
 
         Args:
@@ -857,11 +894,12 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _epub_cover(filepath: Path) -> Image.Image | None:
+    def _epub_cover(filepath: Path, ext: str) -> Image.Image | None:
         """Extracts the cover specified by ComicInfo.xml or first image found in the ePub file.
 
         Args:
             filepath (Path): The path to the ePub file.
+            ext (str): The file extension.
 
         Returns:
             Image: The cover specified in ComicInfo.xml,
@@ -869,21 +907,29 @@ class ThumbRenderer(QObject):
         """
         im: Image.Image | None = None
         try:
-            with zipfile.ZipFile(filepath, "r") as zip_file:
-                if "ComicInfo.xml" in zip_file.namelist():
-                    comic_info = ET.fromstring(zip_file.read("ComicInfo.xml"))
-                    im = ThumbRenderer.__cover_from_comic_info(zip_file, comic_info, "FrontCover")
+            archiver: _Archive_T = zipfile.ZipFile
+            if ext == ".cb7":
+                archiver = _SevenZipFile
+            elif ext == ".cbr":
+                archiver = rarfile.RarFile
+            elif ext == ".cbt":
+                archiver = _TarFile
+
+            with archiver(filepath, "r") as archive:
+                if "ComicInfo.xml" in archive.namelist():
+                    comic_info = ET.fromstring(archive.read("ComicInfo.xml"))
+                    im = ThumbRenderer.__cover_from_comic_info(archive, comic_info, "FrontCover")
                     if not im:
                         im = ThumbRenderer.__cover_from_comic_info(
-                            zip_file, comic_info, "InnerCover"
+                            archive, comic_info, "InnerCover"
                         )
 
                 if not im:
-                    for file_name in zip_file.namelist():
+                    for file_name in archive.namelist():
                         if file_name.lower().endswith(
                             (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg")
                         ):
-                            image_data = zip_file.read(file_name)
+                            image_data = archive.read(file_name)
                             im = Image.open(BytesIO(image_data))
                             break
         except Exception as e:
@@ -893,12 +939,12 @@ class ThumbRenderer(QObject):
 
     @staticmethod
     def __cover_from_comic_info(
-        zip_file: zipfile.ZipFile, comic_info: Element, cover_type: str
+        archive: _Archive, comic_info: Element, cover_type: str
     ) -> Image.Image | None:
         """Extract the cover specified in ComicInfo.xml.
 
         Args:
-            zip_file (zipfile.ZipFile): The current ePub file.
+            archive (_Archive): The current ePub file.
             comic_info (Element): The parsed ComicInfo.xml.
             cover_type (str): The type of cover to load.
 
@@ -909,22 +955,22 @@ class ThumbRenderer(QObject):
 
         cover = comic_info.find(f"./*Page[@Type='{cover_type}']")
         if cover is not None:
-            pages = [f for f in zip_file.namelist() if f != "ComicInfo.xml"]
-            page_name = pages[int(cover.get("Image"))]
+            pages = [f for f in archive.namelist() if f != "ComicInfo.xml"]
+            page_name = pages[int(unwrap(cover.get("Image")))]
             if page_name.endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp", ".svg")):
-                image_data = zip_file.read(page_name)
+                image_data = archive.read(page_name)
                 im = Image.open(BytesIO(image_data))
 
         return im
 
-    def _font_short_thumb(self, filepath: Path, size: int) -> Image.Image:
+    def _font_short_thumb(self, filepath: Path, size: int) -> Image.Image | None:
         """Render a small font preview ("Aa") thumbnail from a font file.
 
         Args:
             filepath (Path): The path of the file.
             size (tuple[int,int]): The size of the thumbnail.
         """
-        im: Image.Image = None
+        im: Image.Image | None = None
         try:
             bg = Image.new("RGB", (size, size), color="#000000")
             raw = Image.new("RGB", (size * 3, size * 3), color="#000000")
@@ -978,7 +1024,7 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _font_long_thumb(filepath: Path, size: int) -> Image.Image:
+    def _font_long_thumb(filepath: Path, size: int) -> Image.Image | None:
         """Render a large font preview ("Alphabet") thumbnail from a font file.
 
         Args:
@@ -987,7 +1033,7 @@ class ThumbRenderer(QObject):
         """
         # Scale the sample font sizes to the preview image
         # resolution,assuming the sizes are tuned for 256px.
-        im: Image.Image = None
+        im: Image.Image | None = None
         try:
             scaled_sizes: list[int] = [math.floor(x * (size / 256)) for x in FONT_SAMPLE_SIZES]
             bg = Image.new("RGBA", (size, size), color="#00000000")
@@ -998,7 +1044,10 @@ class ThumbRenderer(QObject):
             for font_size in scaled_sizes:
                 font = ImageFont.truetype(filepath, size=font_size)
                 text_wrapped: str = wrap_full_text(
-                    FONT_SAMPLE_TEXT, font=font, width=size, draw=draw
+                    FONT_SAMPLE_TEXT,
+                    font=font,  # pyright: ignore[reportArgumentType]
+                    width=size,
+                    draw=draw,
                 )
                 draw.multiline_text((0, y_offset), text_wrapped, font=font)
                 y_offset += (len(text_wrapped.split("\n")) + lines_of_padding) * draw.textbbox(
@@ -1010,13 +1059,13 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _image_raw_thumb(filepath: Path) -> Image.Image:
+    def _image_raw_thumb(filepath: Path) -> Image.Image | None:
         """Render a thumbnail for a RAW image type.
 
         Args:
             filepath (Path): The path of the file.
         """
-        im: Image.Image = None
+        im: Image.Image | None = None
         try:
             with rawpy.imread(str(filepath)) as raw:
                 rgb = raw.postprocess(use_camera_wb=True)
@@ -1028,8 +1077,8 @@ class ThumbRenderer(QObject):
                 )
         except (
             DecompressionBombError,
-            rawpy._rawpy.LibRawIOError,
-            rawpy._rawpy.LibRawFileUnsupportedError,
+            rawpy._rawpy.LibRawIOError,  # pyright: ignore[reportAttributeAccessIssue]
+            rawpy._rawpy.LibRawFileUnsupportedError,  # pyright: ignore[reportAttributeAccessIssue]
         ) as e:
             logger.error("Couldn't render thumbnail", filepath=filepath, error=type(e).__name__)
         return im
@@ -1065,13 +1114,13 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _image_thumb(filepath: Path) -> Image.Image:
+    def _image_thumb(filepath: Path) -> Image.Image | None:
         """Render a thumbnail for a standard image type.
 
         Args:
             filepath (Path): The path of the file.
         """
-        im: Image.Image = None
+        im: Image.Image | None = None
         try:
             im = Image.open(filepath)
             if im.mode != "RGB" and im.mode != "RGBA":
@@ -1080,7 +1129,7 @@ class ThumbRenderer(QObject):
                 new_bg = Image.new("RGB", im.size, color="#1e1e1e")
                 new_bg.paste(im, mask=im.getchannel(3))
                 im = new_bg
-            im = ImageOps.exif_transpose(im)
+            im = unwrap(ImageOps.exif_transpose(im))
         except (
             FileNotFoundError,
             UnidentifiedImageError,
@@ -1098,7 +1147,7 @@ class ThumbRenderer(QObject):
             filepath (Path): The path of the file.
             size (tuple[int,int]): The size of the thumbnail.
         """
-        im: Image.Image = None
+        im: Image.Image | None = None
         # Create an image to draw the svg to and a painter to do the drawing
         q_image: QImage = QImage(size, size, QImage.Format.Format_ARGB32)
         q_image.fill("#1e1e1e")
@@ -1128,7 +1177,7 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _iwork_thumb(filepath: Path) -> Image.Image:
+    def _iwork_thumb(filepath: Path) -> Image.Image | None:
         """Extract and render a thumbnail for an Apple iWork (Pages, Numbers, Keynote) file.
 
         Args:
@@ -1166,7 +1215,7 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _model_stl_thumb(filepath: Path, size: int) -> Image.Image:
+    def _model_stl_thumb(filepath: Path, size: int) -> Image.Image | None:
         """Render a thumbnail for an STL file.
 
         Args:
@@ -1177,7 +1226,7 @@ class ThumbRenderer(QObject):
         # The following commented code describes a method for rendering via
         # matplotlib.
         # This implementation did not play nice with multithreading.
-        im: Image.Image = None
+        im: Image.Image | None = None
         # # Create a new plot
         # matplotlib.use('agg')
         # figure = plt.figure()
@@ -1199,13 +1248,13 @@ class ThumbRenderer(QObject):
         return im
 
     @staticmethod
-    def _pdf_thumb(filepath: Path, size: int) -> Image.Image:
+    def _pdf_thumb(filepath: Path, size: int) -> Image.Image | None:
         """Render a thumbnail for a PDF file.
 
         filepath (Path): The path of the file.
             size (int): The size of the icon.
         """
-        im: Image.Image = None
+        im: Image.Image | None = None
 
         file: QFile = QFile(filepath)
         success: bool = file.open(
@@ -1483,7 +1532,7 @@ class ThumbRenderer(QObject):
                     image
                     and Ignore.compiled_patterns
                     and Ignore.compiled_patterns.match(
-                        filepath.relative_to(unwrap(self.lib.library_dir))
+                        filepath.relative_to(unwrap(self.driver.lib.library_dir))
                     )
                 ):
                     image = render_ignored((adj_size, adj_size), pixel_ratio, image)
@@ -1573,7 +1622,7 @@ class ThumbRenderer(QObject):
                 if MediaCategories.is_ext_in_category(
                     ext, MediaCategories.EBOOK_TYPES, mime_fallback=True
                 ):
-                    image = self._epub_cover(_filepath)
+                    image = self._epub_cover(_filepath, ext)
                 # Krita ========================================================
                 elif MediaCategories.is_ext_in_category(
                     ext, MediaCategories.KRITA_TYPES, mime_fallback=True
