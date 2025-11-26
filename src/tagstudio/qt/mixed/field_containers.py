@@ -205,7 +205,7 @@ class FieldContainers(QWidget):
     def remove_field_prompt(self, name: str) -> str:
         return Translations.format("library.field.confirm_remove", name=name)
 
-    def add_field_to_selected(self, field_list: list):
+    def add_field_to_selected(self, field_list: list[str]):
         """Add list of entry fields to one or more selected items.
 
         Uses the current driver selection, NOT the field containers cache.
@@ -216,10 +216,10 @@ class FieldContainers(QWidget):
             fields=field_list,
         )
         for entry_id in self.driver.selected:
-            for field_item in field_list:
+            for field_id in field_list:
                 self.lib.add_field_to_entry(
                     entry_id,
-                    field_id=field_item.data(Qt.ItemDataRole.UserRole),
+                    field_id=field_id,
                 )
 
     def add_tags_to_selected(self, tags: int | list[int]):

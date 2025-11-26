@@ -11,6 +11,7 @@ from tagstudio.qt.controllers.preview_thumb_controller import PreviewThumb
 from tagstudio.qt.controllers.tag_form_controller import TagForm, TagFormComponent
 from tagstudio.qt.mixed.field_containers import FieldContainers
 from tagstudio.qt.mixed.file_attributes import FileAttributes
+from tagstudio.qt.translations import Translations
 from tagstudio.qt.views.panel_modal import PanelWidget
 from tagstudio.qt.views.preview_panel_view import BUTTON_STYLE
 
@@ -43,6 +44,26 @@ class QuickTaggingPanelView(PanelWidget):
 
         self.__fields = FieldContainers(self.__lib, driver)
         left_panel_layout.addWidget(self.__fields)
+
+        add_buttons_container = QWidget()
+        add_buttons_layout = QHBoxLayout(add_buttons_container)
+        add_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        add_buttons_layout.setSpacing(6)
+
+        add_tag_button = QPushButton(Translations["tag.add"])
+        add_tag_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_tag_button.setMinimumHeight(28)
+        add_tag_button.setStyleSheet(BUTTON_STYLE)
+        add_tag_button.clicked.connect(self._add_tag_button_callback)
+        add_buttons_layout.addWidget(add_tag_button)
+
+        add_field_button = QPushButton(Translations["library.field.add"])
+        add_field_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_field_button.setMinimumHeight(28)
+        add_field_button.setStyleSheet(BUTTON_STYLE)
+        add_field_button.clicked.connect(self._add_field_button_callback)
+        add_buttons_layout.addWidget(add_field_button)
+        left_panel_layout.addWidget(add_buttons_container)
 
         root_splitter.addWidget(left_panel)
         root_splitter.setStretchFactor(0, 2)
@@ -93,6 +114,12 @@ class QuickTaggingPanelView(PanelWidget):
 
     def _on_next(self) -> None:
         raise NotImplementedError
+
+    def _add_field_button_callback(self):
+        raise NotImplementedError()
+
+    def _add_tag_button_callback(self):
+        raise NotImplementedError()
 
     def _set_entry(self, entry_id: Entry | int) -> None:
         if isinstance(entry_id, int):

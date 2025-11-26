@@ -26,7 +26,7 @@ logger = structlog.get_logger(__name__)
 
 # NOTE: This class doesn't inherit from PanelWidget? Seems like it predates that system?
 class AddFieldModal(QWidget):
-    done = Signal(list)
+    done = Signal(list)  # accepts `list[str]` (PySide6 breaks when setting that as the type)
 
     def __init__(self, library: Library):
         # [Done]
@@ -63,7 +63,12 @@ class AddFieldModal(QWidget):
         self.save_button.clicked.connect(
             lambda: (
                 # get userData for each selected item
-                self.done.emit(self.list_widget.selectedItems())
+                self.done.emit(
+                    [
+                        list_item.data(Qt.ItemDataRole.UserRole)
+                        for list_item in self.list_widget.selectedItems()
+                    ]
+                )
             )
         )
         self.button_layout.addWidget(self.save_button)

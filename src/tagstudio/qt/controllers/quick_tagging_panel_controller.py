@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QInputDialog, QWidget
 from tagstudio.core.library.alchemy.enums import BrowsingState
 from tagstudio.core.library.alchemy.library import Library
 from tagstudio.core.utils.types import unwrap
+from tagstudio.qt.mixed.add_field import AddFieldModal
+from tagstudio.qt.mixed.tag_search import TagSearchModal
 from tagstudio.qt.views.panel_modal import PanelModal
 from tagstudio.qt.views.quick_tagging_panel_view import QuickTaggingPanelView
 from tagstudio.qt.views.tag_form_view import TagForm
@@ -35,6 +37,26 @@ class QuickTaggingPanel(QuickTaggingPanelView):
     @override
     def _on_previous(self):  # type: ignore[misc]
         self.__update_index(-1)
+
+    @override
+    def _add_field_button_callback(self):
+        def action(field_list: list[str]):
+            for field_id in field_list:
+                self.__lib.add_field_to_entry(self.__results[self.__index], field_id=field_id)
+            self.__update_index()
+
+        afm = AddFieldModal(self.__lib)
+        afm.done.connect(action)
+        afm.show()
+
+    @override
+    def _add_tag_button_callback(self):
+        tsm = TagSearchModal(self.__lib, is_tag_chooser=True)
+        tsm.tsp.tag_chosen.connect(
+            lambda tag_id: self.__lib.add_tags_to_entries(self.__results[self.__index], tag_id)
+        )
+        unwrap(tsm.tsp.panel_done_button).clicked.connect(lambda: self.__update_index())
+        tsm.show()
 
     def set_search(self, query: BrowsingState) -> None:
         self.__index = 0
